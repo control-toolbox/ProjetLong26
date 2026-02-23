@@ -67,11 +67,12 @@ macro transform(e, t_struct, log=false)
             else
                 expr = e
             end  
+
+            # if no invoke, the backend is unknown
+            code = Base.invokelatest(def_transfo, expr, ts_instance.backend.name; log=log)
+            eval(:( CTParser.@def $code ))
         end
 
-        # if no invoke, the backend is unknown
-        code = Base.invokelatest(def_transfo, expr, ts_instance.backend.name; log=log)
-        return eval(:( CTParser.@def $code ))
     catch ex
         rethrow(ex)
     end

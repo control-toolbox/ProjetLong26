@@ -36,6 +36,16 @@ end
 
 @testset "CTTransfo Tests" begin
 
+    # ocp = @transform (CTParser.@def begin
+    #     t ∈ [0, 1], time
+    #     x ∈ R², state
+    #     u ∈ R, control
+    #     x(0) == [-1, 0]
+    #     x(1) == 2 * [0, 0]
+    #     ẋ(t) == 2 * [x₂(t), u(t)]
+    #     2 * ∫( 0.5u(t)^2 ) → min
+    # end) TimeSubstitution(8, 10)
+
     ocp = CTParser.@def begin
         t ∈ [0, 1], time
         x ∈ R², state
