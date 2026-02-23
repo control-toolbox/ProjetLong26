@@ -12,15 +12,21 @@ $(EXPORTS)
 module CTTransfo
 
 # imports
-using OptimalControl
+using CTBase
+using CTParser
+using CTModels
 using OrderedCollections
+using DocStringExtensions
 using Parameters # @with_kw: to have default values in struct
 using MacroTools: @capture
+using OptimalControl
 
 # exports
-export AbstractTransformation, TransfoBackend, @transform
+export AbstractTransformation, TransfoBackend, @transform, TimeSubstitution
+export clean_name
 
 # sources
-include("transfo_modular.jl")
+include("transformation.jl")
+include("time_substitution.jl")
 
 end
