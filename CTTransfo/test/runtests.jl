@@ -53,7 +53,7 @@ end
         x(0) == [-1, 0]
         x(1) == 2 * [0, 0]
         ẋ(t) == 2 * [x₂(t), u(t)]
-        2 * ∫( 0.5u(t)^2 ) → min
+        (1+2) * ∫( 0.5u(t)^2 ) → min
     end
 
     # sol1 = OptimalControl.solve(ocp)
@@ -62,7 +62,7 @@ end
 
     n_ocp = @transform ocp TimeSubstitution(8, 10) false
 
-    sol = OptimalControl.solve(n_ocp)
-    p = Plots.plot(sol)
-    Plots.savefig(p, "transformation_solution_plot.png")
+    # sol = OptimalControl.solve(n_ocp)
+    # p = Plots.plot(sol)
+    # Plots.savefig(p, "transformation_solution_plot.png")
 end
