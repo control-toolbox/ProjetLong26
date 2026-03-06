@@ -4,6 +4,7 @@
 
 abstract type AbstractTransformation end
 
+#recup la ligne pré alias subs ?
 function p_default_transfo!(p, args...; kwargs...)
     return Meta.parse(p.line)
 end

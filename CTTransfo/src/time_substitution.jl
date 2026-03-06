@@ -51,30 +51,12 @@ function p_dynamics_timesub!(ts, p, args...)
 end
 
 function p_lagrange_timesub!(ts, p, p_ocp, e, type, args...)
-    # line = Meta.parse(p.line)
-    
-    # transform_cost = (h, args...) -> begin
-    #     e = Expr(h, args...)
-    #     if e.head == :call && e.args[1] == :→
-    #         lhs = e.args[2]
-    #         rhs = e.args[3]
-    #         if lhs isa Expr && lhs.head == :call && lhs.args[1] == :* && length(lhs.args) == 3 &&
-    #            lhs.args[3] isa Expr && lhs.args[3].head == :call && lhs.args[3].args[1] == :∫
-    #             # parser match e1 * ∫( ... ) not e1 * e2 * ∫( ... )
-    #             e1 = ts.k * lhs.args[2]
-    #             return Expr(:call, :→, Expr(:call, :*, e1, lhs.args[3]), rhs)
-    #         else
-    #             return Expr(:call, :→, Expr(:call, :*, ts.k, lhs), rhs)
-    #         end
-    #     else
-    #         return e
-    #     end
-    # end
-    
-    # line = CTParser.expr_it(line, transform_cost, x -> x)
+    # dump(e)
+    # println(p.aliases)
+    # Wrapper to adapt clean_name to expr_it's signature (head, args...)
+    clean_expr_wrapper = (h, expr_args...) -> clean_name(Expr(h, expr_args...))
+    e = CTParser.expr_it(e, clean_expr_wrapper, x -> x)
 
-    # return line
-    println(e)
     line = :($(ts.k) * ∫($e) → $type)
     return line
 end
