@@ -47,20 +47,20 @@ end
     # end) TimeSubstitution(8, 10)
 
     ocp = CTParser.@def begin
-        t ∈ [0, 1], time
+        t ∈ [8, 10], time
         x ∈ R², state
         u ∈ R, control
-        x(0) == [-1, 0]
-        x(1) == 2 * [0, 0]
+        x(8) == [-1, 0]
+        x(10) == 2 * [0, 0]
         ẋ(t) == 2 * [x₂(t), u(t)]
         (2) * ∫( 0.5u(t)^2 ) → min
     end
 
-    # sol1 = OptimalControl.solve(ocp)
-    # p1 = Plots.plot(sol1)
-    # Plots.savefig(p1, "original_solution.png")
+    sol1 = OptimalControl.solve(ocp)
+    p1 = Plots.plot(sol1)
+    Plots.savefig(p1, "original_solution.png")
 
-    n_ocp = @transform ocp TimeSubstitution(8, 10) false
+    n_ocp = @transform ocp TimeSubstitution(0, 1) false
 
     sol = OptimalControl.solve(n_ocp)
     p = Plots.plot(sol)
