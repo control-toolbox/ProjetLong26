@@ -17,13 +17,8 @@ function clean_name(e)
 end
 
 function p_time_timesub!(ts, p, p_ocp, t, t0, tf)
-    t0 isa Int64 || return CTParser.__throw("TimeSubstitution requires t0 to be an integer", p.lnum, p.line)
-    tf isa Int64 || return CTParser.__throw("TimeSubstitution requires tf to be an integer", p.lnum, p.line)
-    println("timesub time")
-    println(p.v)
-    dump(t0)
-    dump(tf)
-    println("  -> Original time interval: [", t0, ", ", tf, "]")
+    !CTParser.has(t0, p.v) || return CTParser.__throw("time should be fixed : $(t0)", p.lnum, p.line)
+    !CTParser.has(tf, p.v) || return CTParser.__throw("time should be fixed : $(tf)", p.lnum, p.line)
     ts.original_t0 = t0
     ts.original_tf = tf
     ts.k = (tf - t0) / (ts.tf - ts.t0)
@@ -80,16 +75,16 @@ function p_bolza_timesub!(ts, p, p_ocp, e1, e2, type)
 end
 
 @with_kw mutable struct TimeSubstitution <: AbstractTransformation
-    t0::Int64
-    tf::Int64
-    original_t0::Union{Int64,Nothing} = nothing
-    original_tf::Union{Int64,Nothing} = nothing
+    t0::Float64
+    tf::Float64
+    original_t0::Union{Float64,Nothing} = nothing
+    original_tf::Union{Float64,Nothing} = nothing
     k::Float64 = 1.0
     backend::TransfoBackend = TransfoBackend(name=:time_substitution)
 end
 
 # t = new_t0 + ($original_tf - $original_t0) / ($new_tf - $new_t0) * (s - new_t0)
-function TimeSubstitution(t0::Int64, tf::Int64)
+function TimeSubstitution(t0::Float64, tf::Float64)
     ts = TimeSubstitution(t0=t0, tf=tf)
     ts.backend.transfo_dict[:time] = (args...) -> p_time_timesub!(ts, args...)
     ts.backend.transfo_dict[:constraint] = (args...) -> p_constraint_timesub!(ts, args...)

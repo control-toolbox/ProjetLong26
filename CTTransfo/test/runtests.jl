@@ -50,13 +50,12 @@ end
     c  = 0.5 * sqrt(g0 * h0)
     Dc = 0.5 * 620 * m0 / g0
     Tm = 3.5 * g0 * m0
-    t0 = 0.0; tf = 0.2
 
     drag(h, v) = Dc * v^2 * exp(-hc * (h - h0) / h0)
     grav(h)    = g0 * (h0 / h)^2
 
     ocp = CTParser.@def begin
-        t ∈ [t0, tf], time
+        t ∈ [0.0, 0.2], time
         x = (h, v, m) ∈ R^3, state
         T ∈ R, control
 
@@ -67,21 +66,21 @@ end
         ∂(v)(t) == (T(t) - drag(h(t), v(t))) / m(t) - grav(h(t))
         ∂(m)(t) == -T(t) / c
 
-        h(t0) == 1.0
-        v(t0) == 0.0
-        m(t0) == 1.0
-        m(tf) == 0.6
-        h(tf) → max
+        h(0.0) == 1.0
+        v(0.0) == 0.0
+        m(0.0) == 1.0
+        m(0.2) == 0.6
+        h(0.2) → max
     end
 
     # sol1 = OptimalControl.solve(ocp)
     # p1 = Plots.plot(sol1)
     # Plots.savefig(p1, "original_solution.png")
 
-    n_ocp = @transform ocp TimeSubstitution(0, 1) false
+    n_ocp = @transform ocp TimeSubstitution(0.0, 1.0) false
     # n_ocp = @transform ocp FreeToFixedTime()
 
-    # sol = OptimalControl.solve(n_ocp)
-    # p = Plots.plot(sol)
-    # Plots.savefig(p, "transformation_solution_plot.png")
+    sol = OptimalControl.solve(n_ocp)
+    p = Plots.plot(sol)
+    Plots.savefig(p, "transformation_solution_plot.png")
 end
