@@ -16,19 +16,33 @@ function clean_name(e)
     return e
 end
 
+function replace_calls(ts, line::String)
+    line = replace(line, "($(ts.original_t0))" => "($(ts.t0))")
+    line = replace(line, "($(ts.original_tf))" => "($(ts.tf))")
+    return line
+end
+
+function replace_calls(ts, line::Expr)
+    if line.head == :call
+        line = replace_calls(ts, string(line))
+        return Meta.parse(line)
+    else
+        return line
+    end
+end
+
 function p_time_timesub!(ts, p, p_ocp, t, t0, tf)
     !CTParser.has(t0, p.v) || return CTParser.__throw("time should be fixed : $(t0)", p.lnum, p.line)
     !CTParser.has(tf, p.v) || return CTParser.__throw("time should be fixed : $(tf)", p.lnum, p.line)
     ts.original_t0 = t0
     ts.original_tf = tf
-    ts.k = (tf - t0) / (ts.tf - ts.t0)
+    ts.k = :(($tf - $t0) / ($(ts.tf) - $(ts.t0)))
     return :($t ∈ [$(ts.t0), $(ts.tf)], time)
 end
 
 function p_constraint_timesub!(ts, p, p_ocp, e1, e2, e3, c_type, label)
     line = p.line
-    line = replace(line, "($(ts.original_t0))" => "($(ts.t0))")
-    line = replace(line, "($(ts.original_tf))" => "($(ts.tf))")
+    line = replace_calls(ts, line)
     return Meta.parse(line)
 end
 
@@ -54,7 +68,7 @@ function p_lagrange_timesub!(ts, p, p_ocp, e, type, args...)
     e = CTParser.expr_it(e, clean_expr_wrapper, x -> x)
 
     line = :($(ts.k) * ∫($e) → $type)
-    return line
+    return replace_calls(ts, line)
 end
 
 function p_mayer_timesub!(ts, p, p_ocp, e, type)
@@ -62,7 +76,7 @@ function p_mayer_timesub!(ts, p, p_ocp, e, type)
     e = CTParser.expr_it(e, clean_expr_wrapper, x -> x)
 
     line = :($(ts.k) * $e → $type)
-    return line
+    return replace_calls(ts, line)
 end
 
 function p_bolza_timesub!(ts, p, p_ocp, e1, e2, type)
@@ -71,15 +85,15 @@ function p_bolza_timesub!(ts, p, p_ocp, e1, e2, type)
     e2 = CTParser.expr_it(e2, clean_expr_wrapper, x -> x)
 
     line = :($(ts.k) * $e1 + $(ts.k) * $e2 → $type)
-    return line
+    return replace_calls(ts, line)
 end
 
 @with_kw mutable struct TimeSubstitution <: AbstractTransformation
     t0::Float64
     tf::Float64
-    original_t0::Union{Float64,Nothing} = nothing
-    original_tf::Union{Float64,Nothing} = nothing
-    k::Float64 = 1.0
+    original_t0::Union{Float64,Symbol,Nothing} = nothing
+    original_tf::Union{Float64,Symbol,Nothing} = nothing
+    k::Union{Expr,Nothing} = nothing
     backend::TransfoBackend = TransfoBackend(name=:time_substitution)
 end
 

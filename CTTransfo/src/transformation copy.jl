@@ -38,27 +38,44 @@ function add_backend!(backend::TransfoBackend)
 end
 
 function def_transfo(e, backend_name; log=false)
+    # Parsing relies on PARSING_BACKENDS being up to date
     pref = CTParser.prefix_fun()
     p_ocp = CTParser.__symgen(:p_ocp)
     p = CTParser.ParsingInfo()
     ee = QuoteNode(e)
     code = CTParser.parse!(p, p_ocp, e; log=log, backend=backend_name)
-
-    if log
-         println("Generated code for transformation ($backend_name):")
-         println(code)
-    end
-
+    println("Generated code for transformation ($backend_name):")
+    println(code)
     return code
 end
 
-macro transform(ocp_arg, transformation_arg, log=false)
+# NOTE on @transform macro limitations:
+# The transformation code generation works correctly, but execution via eval() 
+# has scope limitations. To work around CTParser's internal eval() calls,
+# we need to execute in a module where the referenced variables are accessible.
+
+macro transform(e, t_struct, log=false)
+    # Evaluate transformation instance at macro time
+    ts_instance = Core.eval(__module__, t_struct)
+    backend_name = ts_instance.backend.name
+    
+    # Return a quote that will be executed at the call site
     quote
-        backend_name = $(esc(transformation_arg)).backend.name
-        ocp_obj = $(esc(ocp_arg))
-        ocp_expr = CTModels.definition(ocp_obj)
-        transformed_code = Base.invokelatest(def_transfo, ocp_expr, backend_name; log=$log)
-        ocp_code = CTParser.def_fun(transformed_code; log=$log)
-        eval(ocp_code)
+        #  Capture the calling module for eval() context
+        caller_module = @__MODULE__
+        
+        # Get the OCP definition from the input OCP
+        ocp_expr = CTModels.definition($(esc(e)))
+        
+        # Transform the OCP expression using the backend
+        # This returns code (an Expr) that represents the transformed OCP
+        transformed_code = def_transfo(ocp_expr, $(QuoteNode(backend_name)); log=$(esc(log)))
+        
+        # Build the OCP from the transformed code
+        # def_fun returns code that needs to be evaluated in the caller's module context
+        ocp_code = CTParser.def_fun(transformed_code; log=$(esc(log)))
+        
+        # Evaluate in the caller's module which has access to the variables
+        Core.eval(caller_module, ocp_code)
     end
 end

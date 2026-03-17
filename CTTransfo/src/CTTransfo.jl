@@ -22,13 +22,12 @@ using MacroTools: @capture
 using OptimalControl
 
 # exports
-export AbstractTransformation, TransfoBackend, @transform, TimeSubstitution, FreeToFixedTime
+export AbstractTransformation, TransfoBackend, @transform, apply_transformation, TimeSubstitution, Identity
 export clean_name
 
 # sources
 include("transformation.jl")
 include("time_substitution.jl")
-# include("free_to_fixed_time.jl")
-# include("fixed_to_free_time.jl")
+include("identity.jl")
 
 end
