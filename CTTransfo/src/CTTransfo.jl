@@ -22,7 +22,7 @@ using MacroTools: @capture
 using OptimalControl
 
 # exports
-export AbstractTransformation, TransfoBackend, @transform, apply_transformation, TimeSubstitution, Identity
+export AbstractTransformation, TransfoBackend, @transform, TimeSubstitution, Identity
 export clean_name
 
 # sources
