@@ -16,29 +16,43 @@ function clean_name(e)
     return e
 end
 
-#ne fonctionne pas si t0 ou tf temps libre
+function replace_calls(ts, line::String)
+    line = replace(line, "($(ts.original_t0))" => "($(ts.t0))")
+    line = replace(line, "($(ts.original_tf))" => "($(ts.tf))")
+    return line
+end
+
+function replace_calls(ts, line::Expr)
+    if line.head == :call
+        line = replace_calls(ts, string(line))
+        return Meta.parse(line)
+    else
+        return line
+    end
+end
+
 function p_time_timesub!(ts, p, p_ocp, t, t0, tf)
-    println("timesub time")
+    !CTParser.has(t0, p.v) || return CTParser.__throw("time should be fixed : $(t0)", p.lnum, p.line)
+    !CTParser.has(tf, p.v) || return CTParser.__throw("time should be fixed : $(tf)", p.lnum, p.line)
     ts.original_t0 = t0
     ts.original_tf = tf
-    ts.k = (tf - t0) / (ts.tf - ts.t0)
+    ts.k = :(($tf - $t0) / ($(ts.tf) - $(ts.t0)))
     return :($t ∈ [$(ts.t0), $(ts.tf)], time)
 end
 
 function p_constraint_timesub!(ts, p, p_ocp, e1, e2, e3, c_type, label)
     line = p.line
-    line = replace(line, "($(ts.original_t0))" => "($(ts.t0))")
-    line = replace(line, "($(ts.original_tf))" => "($(ts.tf))")
+    line = replace_calls(ts, line)
     return Meta.parse(line)
 end
 
-# faire aussi pour dynamics_coord
 function p_dynamics_timesub!(ts, p, args...)
     line = Meta.parse(p.line)
     
     transform_dynamics = (h, args...) -> begin
         e = Expr(h, args...)
         if e.head == :call && e.args[1] == :(==)
+            # e1 = ts.k * e.args[3]
             return Expr(:call, :(==), e.args[2], Expr(:call, :*, ts.k, e.args[3]))
         else
             return e
@@ -49,22 +63,50 @@ function p_dynamics_timesub!(ts, p, args...)
     return line
 end
 
+function p_lagrange_timesub!(ts, p, p_ocp, e, type, args...)
+    clean_expr_wrapper = (h, expr_args...) -> clean_name(Expr(h, expr_args...))
+    e = CTParser.expr_it(e, clean_expr_wrapper, x -> x)
+
+    line = :($(ts.k) * ∫($e) → $type)
+    return replace_calls(ts, line)
+end
+
+function p_mayer_timesub!(ts, p, p_ocp, e, type)
+    clean_expr_wrapper = (h, expr_args...) -> clean_name(Expr(h, expr_args...))
+    e = CTParser.expr_it(e, clean_expr_wrapper, x -> x)
+
+    line = :($(ts.k) * $e → $type)
+    return replace_calls(ts, line)
+end
+
+function p_bolza_timesub!(ts, p, p_ocp, e1, e2, type)
+    clean_expr_wrapper = (h, expr_args...) -> clean_name(Expr(h, expr_args...))
+    e1 = CTParser.expr_it(e1, clean_expr_wrapper, x -> x)
+    e2 = CTParser.expr_it(e2, clean_expr_wrapper, x -> x)
+
+    line = :($(ts.k) * $e1 + $(ts.k) * $e2 → $type)
+    return replace_calls(ts, line)
+end
+
 @with_kw mutable struct TimeSubstitution <: AbstractTransformation
-    t0::Int64
-    tf::Int64
-    original_t0::Union{Int64,Nothing} = nothing
-    original_tf::Union{Int64,Nothing} = nothing
-    k::Union{Float64,Nothing} = nothing
+    t0::Float64
+    tf::Float64
+    original_t0::Union{Float64,Symbol,Nothing} = nothing
+    original_tf::Union{Float64,Symbol,Nothing} = nothing
+    k::Union{Expr,Nothing} = nothing
     backend::TransfoBackend = TransfoBackend(name=:time_substitution)
 end
 
 # t = new_t0 + ($original_tf - $original_t0) / ($new_tf - $new_t0) * (s - new_t0)
-function TimeSubstitution(t0::Int64, tf::Int64)
+function TimeSubstitution(t0::Float64, tf::Float64)
     ts = TimeSubstitution(t0=t0, tf=tf)
     ts.backend.transfo_dict[:time] = (args...) -> p_time_timesub!(ts, args...)
     ts.backend.transfo_dict[:constraint] = (args...) -> p_constraint_timesub!(ts, args...)
     ts.backend.transfo_dict[:dynamics] = (args...) -> p_dynamics_timesub!(ts, args...)
     ts.backend.transfo_dict[:dynamics_coord] = (args...) -> p_dynamics_timesub!(ts, args...)
+    ts.backend.transfo_dict[:lagrange] = (args...) -> p_lagrange_timesub!(ts, args...)
+    ts.backend.transfo_dict[:mayer] = (args...) -> p_mayer_timesub!(ts, args...)
+    ts.backend.transfo_dict[:bolza] = (args...) -> p_bolza_timesub!(ts, args...)
     add_backend!(ts.backend)
     return ts
 end

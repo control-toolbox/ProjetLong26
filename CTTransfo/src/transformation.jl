@@ -38,42 +38,27 @@ function add_backend!(backend::TransfoBackend)
 end
 
 function def_transfo(e, backend_name; log=false)
-    # Parsing relies on PARSING_BACKENDS being up to date
     pref = CTParser.prefix_fun()
     p_ocp = CTParser.__symgen(:p_ocp)
     p = CTParser.ParsingInfo()
     ee = QuoteNode(e)
     code = CTParser.parse!(p, p_ocp, e; log=log, backend=backend_name)
-    println("Generated code for transformation ($backend_name):")
-    println(code)
+
+    if log
+         println("Generated code for transformation ($backend_name):")
+         println(code)
+    end
+
     return code
 end
 
-macro transform(e, t_struct, log=false)
-    try
-        ts_instance = Core.eval(__module__, t_struct)
-        
-        if e isa Symbol
-            return quote 
-                original_expr = CTModels.definition($(esc(e)))
-                println("Runtime transformation of variable: ", $(QuoteNode(e)))
-
-                code = Base.invokelatest(def_transfo, original_expr, $ts_instance.backend.name; log=$log)
-                eval(:( CTParser.@def $code ))
-            end
-        else
-            if @capture(e, CTParser.@def block_)
-                expr = block
-            else
-                expr = e
-            end  
-
-            # if no invoke, the backend is unknown
-            code = Base.invokelatest(def_transfo, expr, ts_instance.backend.name; log=log)
-            eval(:( CTParser.@def $code ))
-        end
-
-    catch ex
-        rethrow(ex)
+macro transform(ocp_arg, transformation_arg, log=false)
+    quote
+        backend_name = $(esc(transformation_arg)).backend.name
+        ocp_obj = $(esc(ocp_arg))
+        ocp_expr = CTModels.definition(ocp_obj)
+        transformed_code = Base.invokelatest(def_transfo, ocp_expr, backend_name; log=$log)
+        ocp_code = CTParser.def_fun(transformed_code; log=$log)
+        eval(ocp_code)
     end
 end
