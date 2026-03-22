@@ -2,8 +2,12 @@
 
 Transforming optimal control problems from OptimalControl.jl (OCP) to ModelingToolkit.jl (MTK)
 
+## Transformation
+The transformation from a problem in OCP to a problem in MTK can be done with the file `convert_ocp_to_mtk.jl`.
+The folder `convert_tests/` contains tests for the conversion done with this file.
+
 ## Examples
-In the folder `OCP-examples/`, there are examples of problems in OCP and their equivalents in MTK:
+In the folder `examples/`, there are examples of problems in OCP and their equivalents in MTK:
 
 - A problem with free final time
 - A problem with integral cost

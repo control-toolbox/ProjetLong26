@@ -236,7 +236,7 @@ end
 
 function convert_ocp_to_mtk(ocp, ts, te; sys_name=:opt_system, extra_cons=[], init_state=[], init_control=[])
 
-    println("Conversion ODP -> MTK...")
+    println("Conversion OCP -> MTK...")
 
     t_sym, x_sym, u_sym, sys_eqs, sys_cons = translate_universal_ocp_to_mtk(ocp)
 
